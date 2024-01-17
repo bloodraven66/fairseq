@@ -17,6 +17,7 @@ import sys
 import editdistance
 import numpy as np
 import torch
+sys.path.append('../../')
 from fairseq import checkpoint_utils, options, progress_bar, tasks, utils
 from fairseq.data.data_utils import post_process
 from fairseq.logging.meters import StopwatchMeter, TimeMeter
@@ -270,7 +271,8 @@ def main(args, task=None, model_state=None):
     def build_generator(args):
         w2l_decoder = getattr(args, "w2l_decoder", None)
         if w2l_decoder == "viterbi":
-            from examples.speech_recognition.w2l_decoder import W2lViterbiDecoder
+            # from examples.speech_recognition.w2l_decoder import W2lViterbiDecoder
+            from w2l_decoder import W2lViterbiDecoder
 
             return W2lViterbiDecoder(args, task.target_dictionary)
         elif w2l_decoder == "kenlm":
