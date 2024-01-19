@@ -198,6 +198,11 @@ class Wav2Vec2AsrConfig(FairseqDataclass):
     freeze_regex: Optional[str] = field(
         default=None,
     )
+    
+    simple_unfreeze_only: Optional[str] = field(
+        default=None,
+    )    
+    
 
 @dataclass
 class Wav2Vec2CtcConfig(Wav2Vec2AsrConfig):
@@ -213,7 +218,7 @@ class Wav2VecCtc(BaseFairseqModel):
         self.w2v_encoder = w2v_encoder
         self.blank_weight = cfg.blank_weight
         self.blank_mode = cfg.blank_mode
-
+        
     def upgrade_state_dict_named(self, state_dict, name):
         super().upgrade_state_dict_named(state_dict, name)
         return state_dict
@@ -407,7 +412,6 @@ class Wav2VecEncoder(FairseqEncoder):
             "inverse_mask": False,
             "learned_alibi_scale": getattr(cfg, "update_alibi", True),
         }
-
         if cfg.w2v_args is None:
             state = checkpoint_utils.load_checkpoint_to_cpu(cfg.w2v_path, arg_overrides)
             w2v_args = state.get("cfg", None)
@@ -480,7 +484,7 @@ class Wav2VecEncoder(FairseqEncoder):
         super().__init__(task.source_dictionary)
 
         self.w2v_model = model
-
+        
         self.final_dropout = nn.Dropout(cfg.final_dropout)
         self.freeze_finetune_updates = cfg.freeze_finetune_updates
         self.num_updates = 0
@@ -495,9 +499,11 @@ class Wav2VecEncoder(FairseqEncoder):
 
         if targ_d is not None:
             self.proj = Linear(d, targ_d)
-
         if cfg.freeze_regex is not None:
             self.freeze_regex(cfg.freeze_regex)
+        
+        if cfg.simple_unfreeze_only is not None:
+            self.simple_unfreeze_only(cfg.simple_unfreeze_only)
 
         layer_decay = getattr(cfg, "layer_decay", 1)
         if layer_decay < 1:
@@ -522,6 +528,30 @@ class Wav2VecEncoder(FairseqEncoder):
                     optim_override["optimizer"]["lr_scale"] = layer_scales[lid]
                     p.optim_overrides = optim_override
 
+    def simple_unfreeze_only(self, pattern):
+        logger.info("Freezing all layers matching regex {}".format(pattern))
+        unfrozen_names = []
+        include_others = [
+            "w2v_model.encoder.layer_norm.weight",
+            "w2v_model.encoder.layer_norm.bias",
+            "w2v_model.layer_norm.weight",
+            "w2v_model.layer_norm.bias",
+            "proj.weight",
+            "proj.bias"
+        ]
+        pattern = [pattern] + include_others
+        for name, param in self.named_parameters():
+            present = False
+            for x in pattern:
+                if name.startswith(x):
+                    present = True
+                    break
+  
+            if not present:
+                param.requires_grad_(False)
+            else:
+                unfrozen_names.append(name)
+    
     def freeze_regex(self, pattern):
         unfrozen_names = []
         for name, param in self.named_parameters():
@@ -613,6 +643,9 @@ class Wav2VecEncoder(FairseqEncoder):
 
         if self.proj:
             x = self.proj(x)
+        
+        # for name, param in self.named_parameters():
+        #     print(name, param.requires_grad)
 
         return {
             "encoder_out": x,  # T x B x C

@@ -166,7 +166,7 @@ class Wav2VecModel(BaseFairseqModel):
         """Build a new model instance."""
 
         model = Wav2VecModel(cfg)
-        logger.info(model)
+        logger.info("LOADED")
         return model
 
     def __init__(self, cfg: Wav2VecConfig):
