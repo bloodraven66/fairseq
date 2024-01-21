@@ -1416,7 +1416,7 @@ class AdapterFast(nn.Module):
         nn.init.ones_(self.ln_W)
         nn.init.zeros_(self.ln_b)
 
-    def forward(self, x, adapter_id):
+    def forward(self, x, adapter_id=0):
         ii = adapter_id
         h = x
         h = F.layer_norm(h, (self.input_dim, ), self.ln_W[ii], self.ln_b[ii])
@@ -1485,8 +1485,9 @@ class TransformerSentenceEncoderWithAdapterLayer(TransformerSentenceEncoderLayer
             need_weights=need_weights,
             att_args=att_args,
         )
-        assert corpus_key is not None
-        assert len(set(corpus_key)) == 1, f"corpus_key items are not same {corpus_key}"
-        y = self.adapter_layer(x, corpus_key[0])
+        # assert corpus_key is not None
+        # assert len(set(corpus_key)) == 1, f"corpus_key items are not same {corpus_key}"
+        # y = self.adapter_layer(x, corpus_key[0])
+        y = self.adapter_layer(x)
         x = x + y
         return x, (attn, layer_result)

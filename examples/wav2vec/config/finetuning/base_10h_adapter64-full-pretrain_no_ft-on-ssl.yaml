@@ -1,0 +1,67 @@
+# @package _group_
+
+common:
+  fp16: true
+  log_format: json
+  log_interval: 200
+
+checkpoint:
+  save_interval: 50
+  save_interval_updates: 5000
+  keep_interval_updates: 1
+  no_epoch_checkpoints: true
+  best_checkpoint_metric: wer
+  save_dir: /home1/Sathvik/fairseq_models/librilight_checkpoints
+  checkpoint_suffix: _10h_default_no_ft-on-adapter64-ssl-librilight-10h-full-pretraining
+
+task:
+  _name: audio_finetuning
+  data: /home1/Sathvik/fairseq_datasets/LibriLight/fairseq_files/10hr/
+  normalize: false
+  labels: ltr
+
+dataset:
+  num_workers: 6
+  max_tokens: 3200000
+  skip_invalid_size_inputs_valid_test: true
+  validate_after_updates: 10000
+  validate_interval: 50
+  valid_subset: dev_other
+
+distributed_training:
+  ddp_backend: legacy_ddp
+  distributed_world_size: 1
+
+criterion:
+  _name: ctc
+  zero_infinity: true
+
+optimization:
+  max_update: 20000
+  lr: [0.00005]
+  sentence_avg: true
+  update_freq: [4]
+
+optimizer:
+  _name: adam
+  adam_betas: (0.9,0.98)
+  adam_eps: 1e-08
+
+lr_scheduler:
+  _name: tri_stage
+  phase_ratio: [0.1, 0.4, 0.5]
+  final_lr_scale: 0.05
+
+model:
+  _name: wav2vec_ctc
+  w2v_path: /home1/Sathvik/fairseq_models/librilight_checkpoints/ssl/checkpoint_best_10h_adapter64-every-layer_ssl_ft.pt
+  apply_mask: true
+  mask_prob: 0.65
+  mask_channel_prob: 0.5
+  mask_channel_length: 64
+  layerdrop: 0.05
+  activation_dropout: 0.1
+  feature_grad_mult: 0.0
+  layer_type: trf_adp
+  adp_num: 1
+  freeze_finetune_updates: 1000000

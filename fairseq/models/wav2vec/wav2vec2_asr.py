@@ -202,6 +202,9 @@ class Wav2Vec2AsrConfig(FairseqDataclass):
     simple_unfreeze_only: Optional[str] = field(
         default=None,
     )    
+    keyword_unfreeze_only: Optional[str] = field(
+        default=None,
+    )
     
 
 @dataclass
@@ -504,6 +507,8 @@ class Wav2VecEncoder(FairseqEncoder):
         
         if cfg.simple_unfreeze_only is not None:
             self.simple_unfreeze_only(cfg.simple_unfreeze_only)
+        if cfg.keyword_unfreeze_only is not None:
+            self.keyword_unfreeze_only(cfg.keyword_unfreeze_only)
 
         layer_decay = getattr(cfg, "layer_decay", 1)
         if layer_decay < 1:
@@ -551,7 +556,43 @@ class Wav2VecEncoder(FairseqEncoder):
                 param.requires_grad_(False)
             else:
                 unfrozen_names.append(name)
+        exit()
     
+    def keyword_unfreeze_only(self, pattern):
+        logger.info("Freezing all layers matching regex {}".format(pattern))
+        unfrozen_names = []
+        include_others = [
+            "w2v_model.encoder.layer_norm.weight",
+            "w2v_model.encoder.layer_norm.bias",
+            "w2v_model.layer_norm.weight",
+            "w2v_model.layer_norm.bias",
+            "proj.weight",
+            "proj.bias"
+        ]
+        for name, param in self.named_parameters():
+            present = False
+            for x in include_others:
+                if name.startswith(x):
+                    present = True
+                    break
+  
+            if not present:
+                param.requires_grad_(False)
+            else:
+                
+                unfrozen_names.append(name)
+            
+            if pattern in name:
+                
+                param.requires_grad_(True)
+                unfrozen_names.append(name)
+            else:
+                pass
+            
+            # if not param.requires_grad:
+            #     print(name)
+        # exit()
+        
     def freeze_regex(self, pattern):
         unfrozen_names = []
         for name, param in self.named_parameters():

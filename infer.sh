@@ -3,9 +3,9 @@
 set -e
 
 exp_tag="librilight10"
-subset="test_other"
+subset="test_clean"
 results="/home1/Sathvik/fairseq_results"
-wav2vec2_path="/home1/Sathvik/fairseq_models/librilight_checkpoints/checkpoint_last_10h_default_1layer_ft-on-default-ssl-librilight-10h-pretraining.pt"
+wav2vec2_path="/home1/Sathvik/fairseq_models/librilight_checkpoints/checkpoint_best_10h_default_no_ft-on-adapter64-ssl-librilight-10h-full-pretraining.pt"
 data="/home1/Sathvik/fairseq_datasets/LibriLight/fairseq_files/10hr/"
 lexicon="/home1/Sathvik/fairseq_datasets/LibriLight/fairseq_files/10hr/lexicon.lst"
 beam="70"
