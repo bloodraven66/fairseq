@@ -303,6 +303,9 @@ class Wav2Vec2Config(FairseqDataclass):
     adp_trf_idx: str = field(
         default="all",
     )
+    freeze_base_ssl: bool = field(
+        default=False,
+    )
 
 
 @register_model("wav2vec2", dataclass=Wav2Vec2Config)
@@ -414,7 +417,37 @@ class Wav2Vec2Model(BaseFairseqModel):
             )
 
         self.final_proj = nn.Linear(cfg.encoder_embed_dim, final_dim)
+        
+        if cfg.freeze_base_ssl:
+            self.freeze_base_ssl()
+        
+    def freeze_base_ssl(self):
+        total_params = 0
+        for name, param in self.encoder.named_parameters():
+            if "adapter_layer" not in name:
+                param.requires_grad = False
+        self.layer_norm.weight.requires_grad = False
+        self.layer_norm.bias.requires_grad = False
+        for name, param in self.feature_extractor.named_parameters():
+            param.requires_grad = False
+            
+        if self.post_extract_proj is not None:
+            self.post_extract_proj.weight.requires_grad = False
+            self.post_extract_proj.bias.requires_grad = False
+        if self.quantizer is not None:
+            self.quantizer.weight_proj.weight.requires_grad = False
+            self.quantizer.weight_proj.bias.requires_grad = False
+            self.quantizer.vars.requires_grad = False
+            
+        for name, param in self.project_q.named_parameters():
+            param.requires_grad = False
 
+            # if param.requires_grad:
+            #     print(name, param.numel()/1_000_000)
+            #     total_params += param.numel()
+            
+                    
+        
     def upgrade_state_dict_named(self, state_dict, name):
         super().upgrade_state_dict_named(state_dict, name)
         """Upgrade a (possibly old) state dict for new versions of fairseq."""

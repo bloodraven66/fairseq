@@ -522,82 +522,86 @@ class Trainer(object):
                     last_optim_state = state.get("last_optimizer_state", None)
 
             # load model parameters
-            try:
-                if (
-                    "optimizer_history" in state
-                    and len(state["optimizer_history"]) > 0
-                    and "num_updates" in state["optimizer_history"][-1]
-                ):
-                    self.model.set_num_updates(
-                        state["optimizer_history"][-1]["num_updates"]
-                    )
-
-                # this is the code related to AdaPrune
-                # In short, it removes redundant heads in multi-head attention module based on heads importance provided
-                # For more info, please refer to the paper: https://openreview.net/forum?id=_CMSV7FTzGI
-                # The idea of prune in mha can be summarized as
-                # Fine tune model (e.g. roberta encoder) on a certain datasets with regularization
-                # After the model is trained. User could use get_reserve_head_index and _adaptive_prune_heads functions to get the top X heads with most importance.
-                # Then user uses the rank to prune a new roberta encoder and save the pruned ckpt manually.
-                # User will fine tune the the new roberta encoder via the ckpt saved above
-                # To get rid of registering different pruned version of Roberta, I use the argument --mha-heads-to-keep to prune the Roberta model into a pruned version which matches the pruned ckpt.
-                if (
-                    safe_hasattr(self.model, "args")
-                    and safe_hasattr(self.model.args, "mha_heads_to_keep")
-                    and self.model.args.mha_heads_to_keep != -1
-                ):
-                    logger.info(
-                        f"Prune model: keep {self.model.args.mha_heads_to_keep} heads for each multihead attention module"
-                    )
-                    for layer in self.model.encoder.sentence_encoder.layers:
-                        reserve_head_index = layer.self_attn._get_reserve_head_index(
-                            num_heads_to_keep=self.model.args.mha_heads_to_keep
-                        )
-                        layer.self_attn._adaptive_prune_heads(
-                            reserve_head_index=reserve_head_index
-                        )
-                        layer.self_attn._set_skip_embed_dim_check()
-                    logger.info(self.model)
-                # this is the code related to AdaPrune
-                # In short, it removes redundant units in feedforward layer in each transformer layer based on importance
-                # For more info, please refer to the paper: https://openreview.net/forum?id=_CMSV7FTzGI
-                # The idea of prune in ffn can be summarized as
-                # Fine tune model (e.g. roberta encoder) on a certain datasets with regularization
-                # After the model is trained. User could use _get_fc_rank and _prune_fc_layer functions to get the top X units with most importance.
-                # Then user uses the rank to prune a new roberta encoder and save the pruned ckpt manually.
-                # User will fine tune the the new roberta encoder via the ckpt saved above
-                # To get rid of registering different pruned version of Roberta, I use the argument --ffn-blocks-to-remove to prune the Roberta model into a pruned version which matches the pruned ckpt.
-                if (
-                    safe_hasattr(self.model, "args")
-                    and safe_hasattr(self.model.args, "ffn_blocks_to_remove")
-                    and self.model.args.ffn_blocks_to_remove != -1
-                ):
-                    logger.info(
-                        f"Prune model: remove {self.model.args.ffn_blocks_to_remove} ffn blocks for each transformer layer"
-                    )
-                    for layer in self.model.encoder.sentence_encoder.layers:
-                        remove_index = layer._get_fc_rank(
-                            remove_num=self.model.args.ffn_blocks_to_remove
-                        )
-                        layer._prune_fc_layer(remove_index=remove_index)
-                    logger.info(self.model)
-
-                self.model.load_state_dict(
-                    state["model"], strict=True, model_cfg=self.cfg.model
+            # try:
+                
+                
+            if (
+                "optimizer_history" in state
+                and len(state["optimizer_history"]) > 0
+                and "num_updates" in state["optimizer_history"][-1]
+            ):
+                self.model.set_num_updates(
+                    state["optimizer_history"][-1]["num_updates"]
                 )
-                # save memory for later steps
-                del state["model"]
-                if utils.has_parameters(self.get_criterion()):
-                    self.get_criterion().load_state_dict(
-                        state["criterion"], strict=True
-                    )
-                    del state["criterion"]
 
-            except Exception:
-                raise Exception(
-                    "Cannot load model parameters from checkpoint {}; "
-                    "please ensure that the architectures match.".format(filename)
+            # this is the code related to AdaPrune
+            # In short, it removes redundant heads in multi-head attention module based on heads importance provided
+            # For more info, please refer to the paper: https://openreview.net/forum?id=_CMSV7FTzGI
+            # The idea of prune in mha can be summarized as
+            # Fine tune model (e.g. roberta encoder) on a certain datasets with regularization
+            # After the model is trained. User could use get_reserve_head_index and _adaptive_prune_heads functions to get the top X heads with most importance.
+            # Then user uses the rank to prune a new roberta encoder and save the pruned ckpt manually.
+            # User will fine tune the the new roberta encoder via the ckpt saved above
+            # To get rid of registering different pruned version of Roberta, I use the argument --mha-heads-to-keep to prune the Roberta model into a pruned version which matches the pruned ckpt.
+            if (
+                safe_hasattr(self.model, "args")
+                and safe_hasattr(self.model.args, "mha_heads_to_keep")
+                and self.model.args.mha_heads_to_keep != -1
+            ):
+                logger.info(
+                    f"Prune model: keep {self.model.args.mha_heads_to_keep} heads for each multihead attention module"
                 )
+                for layer in self.model.encoder.sentence_encoder.layers:
+                    reserve_head_index = layer.self_attn._get_reserve_head_index(
+                        num_heads_to_keep=self.model.args.mha_heads_to_keep
+                    )
+                    layer.self_attn._adaptive_prune_heads(
+                        reserve_head_index=reserve_head_index
+                    )
+                    layer.self_attn._set_skip_embed_dim_check()
+                logger.info(self.model)
+            # this is the code related to AdaPrune
+            # In short, it removes redundant units in feedforward layer in each transformer layer based on importance
+            # For more info, please refer to the paper: https://openreview.net/forum?id=_CMSV7FTzGI
+            # The idea of prune in ffn can be summarized as
+            # Fine tune model (e.g. roberta encoder) on a certain datasets with regularization
+            # After the model is trained. User could use _get_fc_rank and _prune_fc_layer functions to get the top X units with most importance.
+            # Then user uses the rank to prune a new roberta encoder and save the pruned ckpt manually.
+            # User will fine tune the the new roberta encoder via the ckpt saved above
+            # To get rid of registering different pruned version of Roberta, I use the argument --ffn-blocks-to-remove to prune the Roberta model into a pruned version which matches the pruned ckpt.
+            if (
+                safe_hasattr(self.model, "args")
+                and safe_hasattr(self.model.args, "ffn_blocks_to_remove")
+                and self.model.args.ffn_blocks_to_remove != -1
+            ):
+                logger.info(
+                    f"Prune model: remove {self.model.args.ffn_blocks_to_remove} ffn blocks for each transformer layer"
+                )
+                for layer in self.model.encoder.sentence_encoder.layers:
+                    remove_index = layer._get_fc_rank(
+                        remove_num=self.model.args.ffn_blocks_to_remove
+                    )
+                    layer._prune_fc_layer(remove_index=remove_index)
+                logger.info(self.model)
+            strict = True
+            if self.cfg.model.layer_type == "trf_adp":
+                strict = False
+            self.model.load_state_dict(
+                state["model"], strict=strict, model_cfg=self.cfg.model
+            )
+            # save memory for later steps
+            del state["model"]
+            if utils.has_parameters(self.get_criterion()):
+                self.get_criterion().load_state_dict(
+                    state["criterion"], strict=True
+                )
+                del state["criterion"]
+
+            # except Exception:
+            #     raise Exception(
+            #         "Cannot load model parameters from checkpoint {}; "
+            #         "please ensure that the architectures match.".format(filename)
+            #     )
             extra_state = state["extra_state"]
             self._optim_history = state["optimizer_history"]
 
@@ -800,6 +804,13 @@ class Trainer(object):
         self.model.train()
         self.criterion.train()
         self.zero_grad()
+        
+        # print(self.model)
+        # for name, params in self.model.named_parameters():
+            # if params.requires_grad:
+                # print(name)
+        # print("model")
+        # exit()
 
         metrics.log_start_time("train_wall", priority=800, round=0)
 

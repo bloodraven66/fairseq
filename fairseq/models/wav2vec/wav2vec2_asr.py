@@ -567,9 +567,12 @@ class Wav2VecEncoder(FairseqEncoder):
             "w2v_model.layer_norm.weight",
             "w2v_model.layer_norm.bias",
             "proj.weight",
-            "proj.bias"
+            "proj.bias",
+            "w2v_model.layer_norm.weight",
+            "w2v_model.layer_norm.bias",
         ]
         for name, param in self.named_parameters():
+            param.requires_grad_(True)
             present = False
             for x in include_others:
                 if name.startswith(x):
@@ -588,9 +591,12 @@ class Wav2VecEncoder(FairseqEncoder):
                 unfrozen_names.append(name)
             else:
                 pass
-            
-            # if not param.requires_grad:
-            #     print(name)
+        # for name, param in self.w2v_model.layer_norm:
+        #     param.requires_grad_(True)
+        
+        for name, param in self.named_parameters():
+            if not param.requires_grad:
+                print(name)
         # exit()
         
     def freeze_regex(self, pattern):
@@ -649,7 +655,12 @@ class Wav2VecEncoder(FairseqEncoder):
                         del state["model"][k]
 
             print(model)
-            model.load_state_dict(state["model"], strict=True)
+            strict = True
+            if cfg.adp_num > 0:
+                strict = False
+                print("Not strict")
+            
+            model.load_state_dict(state["model"], strict=strict)
 
     def set_num_updates(self, num_updates):
         """Set the number of parameters updates."""
