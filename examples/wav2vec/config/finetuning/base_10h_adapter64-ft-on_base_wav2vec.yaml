@@ -4,6 +4,7 @@ common:
   fp16: true
   log_format: json
   log_interval: 200
+  log_file: /home1/Sathvik/fairseq_models/librilight_checkpoints/logs/10h_default_adapter_ft-on-adapter64-ssl-librilight-10h-adapter-only-pretraining.log
 
 checkpoint:
   save_interval: 50
@@ -12,7 +13,7 @@ checkpoint:
   no_epoch_checkpoints: true
   best_checkpoint_metric: wer
   save_dir: /home1/Sathvik/fairseq_models/librilight_checkpoints
-  checkpoint_suffix: _10h_default_adapter_ft-on_default_wav2vec
+  checkpoint_suffix: _10h_default_adapter64_ft-on_default_wav2vec
 
 task:
   _name: audio_finetuning
@@ -22,7 +23,7 @@ task:
 
 dataset:
   num_workers: 6
-  max_tokens: 3200000
+  max_tokens: 5000000
   skip_invalid_size_inputs_valid_test: true
   validate_after_updates: 10000
   validate_interval: 50
@@ -65,4 +66,5 @@ model:
   layer_type: trf_adp
   adp_num: 1
   freeze_finetune_updates: 0
+  adp_dim: 64
   keyword_unfreeze_only: "adapter_layer"

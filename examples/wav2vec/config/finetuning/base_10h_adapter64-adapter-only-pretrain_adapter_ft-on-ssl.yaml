@@ -4,6 +4,7 @@ common:
   fp16: true
   log_format: json
   log_interval: 200
+  log_file: /home1/Sathvik/fairseq_models/librilight_checkpoints/logs/10h_default_adapter_ft-on-adapter64-ssl-librilight-10h-adapter-only-pretraining.log
 
 checkpoint:
   save_interval: 50
@@ -22,7 +23,7 @@ task:
 
 dataset:
   num_workers: 6
-  max_tokens: 3200000
+  max_tokens: 4600000
   skip_invalid_size_inputs_valid_test: true
   validate_after_updates: 10000
   validate_interval: 50
@@ -54,7 +55,7 @@ lr_scheduler:
 
 model:
   _name: wav2vec_ctc
-  w2v_path: /home1/Sathvik/fairseq_models/librilight_checkpoints/ssl/checkpoint_best_10h_adapter64-every-layer_ssl_ft-only-adapter.pt
+  w2v_path: /home1/Sathvik/fairseq_models/librilight_checkpoints/ssl/checkpoint_last_10h_adapter64-every-layer_ssl_ft-only-adapter.pt
   apply_mask: true
   mask_prob: 0.65
   mask_channel_prob: 0.5
