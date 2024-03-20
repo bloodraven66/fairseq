@@ -52,7 +52,6 @@ def load_feature_shard(feat_dir, split, nshard, rank, percent):
     with open(leng_path, "r") as f:
         lengs = [int(line.rstrip()) for line in f]
         offsets = [0] + np.cumsum(lengs[:-1]).tolist()
-
     if percent < 0:
         return np.load(feat_path, mmap_mode="r")
     else:
@@ -101,7 +100,9 @@ def learn_kmeans(
     max_no_improvement,
 ):
     np.random.seed(seed)
+    logger.info("loading feats")
     feat = load_feature(feat_dir, split, nshard, seed, percent)
+    logger.info("init model")
     km_model = get_km_model(
         n_clusters,
         init,
@@ -112,7 +113,9 @@ def learn_kmeans(
         n_init,
         reassignment_ratio,
     )
+    logger.info("fit model")
     km_model.fit(feat)
+    logger.info("dump model")
     joblib.dump(km_model, km_path)
 
     inertia = -km_model.score(feat) / len(feat)
