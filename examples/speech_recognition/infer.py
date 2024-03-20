@@ -11,6 +11,7 @@ Run inference for pre-processed data with a trained model.
 import ast
 import logging
 import math
+import jiwer
 import os
 import sys
 
@@ -153,7 +154,7 @@ def process_predictions(
 
         hyp_words = hyp_words.split()
         tgt_words = tgt_words.split()
-        return editdistance.eval(hyp_words, tgt_words), len(tgt_words)
+        return editdistance.eval(hyp_words, tgt_words), len(tgt_words), hyp_words, tgt_words
 
 
 def prepare_result_files(args):
@@ -276,6 +277,7 @@ def main(args, task=None, model_state=None):
 
             return W2lViterbiDecoder(args, task.target_dictionary)
         elif w2l_decoder == "kenlm":
+
             from examples.speech_recognition.w2l_decoder import W2lKenLMDecoder
 
             return W2lKenLMDecoder(args, task.target_dictionary)
@@ -322,6 +324,7 @@ def main(args, task=None, model_state=None):
         res_files = prepare_result_files(args)
     errs_t = 0
     lengths_t = 0
+    hyp_sents, tar_sents = [], []
     with progress_bar.build_progress_bar(args, itr) as t:
         wps_meter = TimeMeter()
         for sample in t:
@@ -371,7 +374,7 @@ def main(args, task=None, model_state=None):
                 )
                 target_tokens = utils.strip_pad(toks, tgt_dict.pad()).int().cpu()
                 # Process top predictions
-                errs, length = process_predictions(
+                errs, length, hyp, tar = process_predictions(
                     args,
                     hypos[i],
                     None,
@@ -383,6 +386,12 @@ def main(args, task=None, model_state=None):
                 )
                 errs_t += errs
                 lengths_t += length
+                
+                hyp_sent = " ".join(hyp)
+                tar_sent = " ".join(tar)
+                hyp_sents.append(hyp_sent)
+                tar_sents.append(tar_sent)
+                
 
             wps_meter.update(num_generated_tokens)
             t.log({"wps": round(wps_meter.avg)})
@@ -419,6 +428,10 @@ def main(args, task=None, model_state=None):
             )
         )
         logger.info("| Generate {} with beam={}".format(args.gen_subset, args.beam))
+    wer = round(jiwer.wer(tar_sents, hyp_sents)*100,2)
+    cer = round(jiwer.cer(tar_sents, hyp_sents)*100,2)
+    logger.info(f"Jiwer summary")
+    print(str(cer)+","+str(wer))
     return task, wer
 
 
